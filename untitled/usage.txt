@@ -1,0 +1,174 @@
+Crappy Editor for Heroes of the Lance
+
+By Sneaky Jim
+
+This is an overview and usage of the game\map editor for Heroes of the Lance.
+Sadly, the original game's level decoding logic is not yet known to me, but the levels
+can be reconstructed from memory dumps.
+
+The disassembly and the editor's code would talk more about the inner workings of the game
+so that would not be described here, only how to build levels, and assemble them to a 
+working level with this code.
+
+What the code can do, then what it would like to have as a function:
+
+	-From RAM and VRAM dumps, it can reassemble and draw a level to a png.
+	-Can export VRAM dumps as a png, for easier view.
+	-Can handle companion inventory, stats and so on.
+
+-TODO: Add the rest of the finished functions!
+
+To make a new level, you first need a complete VRAM dump with all the tiles loaded already
+in a fashion similar to how an existing level does. A tile editor might help editing of making new graphics for the game. Loading the tiles is your own thing, but if you editing a game on this level, it's more than likely you know some assembly.
+Open a VRAM file in your choice of tile editors, then change the tiles or rearrange 
+them.
+The code that loads tiles is a bit difficult to decipher, so I decided it would be 
+easier to just handle the loading separately.
+
+The game uses a large in-RAM array to store level data. The console, as many of the 
+same era uses 8x8 pixel tiles to make up a screen. The game uses these tiles to make 
+up a larger, 16x16 things, called metatiles. The metatile is drawn clockwise.
+	12
+	34
+Java code that represents this:
+
+                {0, 0}
+                {8, 0}
+
+                {0, 8}
+                {8, 8}
+
+The game stores these tile pointers in RAM:
+	-$C000	Tile pointer in VRAM for tile 1.
+	-$C100	Tile attribute.
+	-$C200	Tile pointer, tile 2.
+	-$C300	Tile attribute.
+	-$C400	Tile pointer, tile 3.
+	-$C500	Tile attribute.
+	-$C600	Tile pointer, tile 4.
+	-$C700	Tile attribute.
+
+As you can see, each tile can use the same attribute as in a normal SMS tile. The 
+bits are arranged the same way as well. Please consult the SMS Programming manual for 
+more info, though I'll include the relevant excerpt here too:
+
+   -Byte 0:    0:Tile fetched from the first 256 tiles.
+	1:Tile fetched from the second 256 tiles.
+	0:Tile is from the first 256 tiles.
+   -Byte 1: Tile is not flipped horizontally.   1:Tile is flipped.
+   -Byte 2:    0:Tile is not flipped vertically. 1:Tile is flipped.
+   -Byte 3:    This does not do anything(false, the game does use this), but I 
+suspect that it controls which 
+palette is used for the given tile.Since the first and second palette uses 4-5 shared colors, this bit does nothing in this context.
+   -Byte 4:    This controls the tile priority. 0 is behind sprites, 1 is in front of.
+ Other bits do nothing. Byte 0 is always 1, since all tile data for the background is coming from the second part of VRAM.
+ The game does not use tile priority, so that's one byte less to care about.
+ Flipping IS used, though not very extensively. So for the background, you need two bytes to handle everything.
+
+Then, after all tiles in a metatile is defined, comes the nine 0x100 (256 bytes) 
+sized arrays, that tells the engine what to draw on that row of metatiles.
+
+One row can be 256 metatiles long, which is 4096 pixels. This is many screens of 
+information, though the console's VRAM does not give you too much variety.
+
+So, by first defining metatiles, then making up the map row by row is how levels are 
+made.
+The game seems to use a fixed color palette. The editor does not support color 
+changing, that's up to you to implement. Tile animations ditto.
+
+As of making levels, you either draw it on paper, or using some map maker, it's up to you. If you are good, you can even make a level with a debugger emulator, poking RAM at the correct places, whatever you want.
+
+So, once you made up all your tiles in the correct order, open up a hex editor.
+Onwards from $C800, you can edit the level by metatile. I would suggest doing this by starting with the lowest part, with the floor.
+
+Floors:
+
+The game stores the floor data in a separate array in the ROM. The disassembly talks about the data format, but see the small excerpt:
+
+The floor collision pointer points to a ROM address, which holds pit data to a certain room the player is in. The first byte is the starting metatile. The next byte is how long the pit is. Then a trailing zero closes the given room's entry.
+Rooms with no pits use address $1761. This does define a pit, starting at column zero, with a length of 1 metatile. Since the game's level starts at 1, and not zero, the pit is out of bounds. Also the zero clips the thing short. You can define as many pits as you like of course.
+
+The pit pointer is one RAM value which needs to be given to the game along with other parts of the level.
+
+So, you have a floor layout, and hopefully a level background. You are halfway tthere.
+
+--------------------------------------------Traps and items-------------------------------------------
+
+Before we go on to enemies, we have to handle what items, and traps are on the stage. Heroes of the Lance uses RAM to handle enemies, items and also traps.
+Enemies can be defeated, traps disarmed or used, and items could be picked up, and so on.
+The engine respawns monsters, but not items, or traps.
+The editor can list items and traps used by the game, and you can expand this as well, only the ROM space gets in your way.
+Item and trap format:
+	Byte 1: Item or trap type. See the item class for the names.
+	Byte 2: Room\Level Nr.
+	Byte 3: Distance from the beginning of the Room\Level.
+	Byte 4: Unknown, or at least I saw nothing using it.
+	Byte 5: The chest is visible or not. If it can be made visible with a spell.
+
+Item and trap array in the ROM at $7B16.
+
+You can make an spreadsheet or something, then transform these to unsignes numbers, or just use a hex editor, whichever is easier for you. The editor is using the original 50 item limit, but you can change that.
+
+Another thing, that I got from the maps, is that the chests are also in the map data. It needs to be checked if the chest graphics are mandatory or not, as player chars can drop items, like throwing axes or something similar.
+
+The program can import items and traps, so that's covered.
+Item names are in the ROM as plaintext. You can modify it with a HEX editor.
+
+------------------------------------------------Enemies-------------------------------------------------
+
+These are the only types that respawn, as I said earlier. To modify the enemy list, you have to edit the ROM. What you seek is starting at $72D1.
+
+Byte 1: Room Nr. (Obvious)
+Byte 2: Enemy Type:
+	0:	Nothing\empty\dead.
+	1:	Goldmoon
+	2:	Sturm
+	3:	Caramon
+	4:	Raistlin
+	5:	Tanis
+	6:	Tasslehoff
+	7:	Riverwind
+	8:	Flint
+	Yes, the player characters can also be added as monsters. They do nothing though, and upon dying, they don't disappear. The game code technically could use them as working enemies, as it checks the monster number, and use some primitive AI on those that are normally enemies.
+	9:	Baaz (Grey gargoyle with a sword)
+	10:	Blue Gargoyle that shoots fireballs
+	11:	Troll
+	12:	Blue Ghost
+	13:	Transparent Soldier
+	14:	Large Dwarf
+	15:	Small Dwarf
+	16:	Soldier
+	17:	Spider
+	18:	Small Dragon
+	19:	Endboss Dragon (Its head and neck to be precise)
+	20:	Empty\glitch
+	21:	Confined small dragon (The web spell makes it tangled, no other enemy has this gfx)
+Byte 3: Enemy X coordinte: Since monsters move by single pixels, you need this one.
+Byte 4: Screen Nr: Since one screen is 256 pixels wide, this tells how many times 256 pixels the enemy is.
+
+Note, that the Dragon is also a monster, but just the head. You can spawn it in, but makes no much sense, since Heroes Of The Lance only uses it one time.
+Adding and removing monsters consists editing this array to how you want to arrange stuff on the level.
+IIRC the game adds eight to the enemy number or something like that. See the enemy array in the code how it does..
+
+-------------------------------------------------Doors----------------------------------------------------
+
+Doors are an integral part of navigating and getting lost in Heroes of the Lance. They are stored as $190B.
+Each door consists of five bytes:
+	
+	-Compass byte:
+		The game uses a compass system for navigation. This byte tells the game which direction (up or down) should light up, telling the player which road can be taken. This does NOT tell the game which direction the compass will shown. The game would change which four directions would rotate. (Clockwise: N-E-S-W, then after going through a door it will become something else like E-S-W-N) This rotation part is handled with RAM value $DE53. You have to manually edit this, or figure out the level loading code. I think I disassembled until the Compass part.
+		Anyways, this byte is made up from the following bits:
+			-0: If this is 1, this the upper direction is lit.
+			-1: If this is 1, then this is a downward route.
+			-2: If this is 1, then this exit will be handled as a falldown exit. There's a special stage showing the currently selected player falling down some chute or something. Upon falling down, the game commences normally.
+			-3: Does not seem to be used. At least nothing is done being used with the other bits.
+			-4: Waterfall bit. If this is 1, then the game tells you the waterfall would cure your wounds. You have to imagine said waterfall, there's no picture, like in the NES version.
+			-5: Unused.
+			-6: Unused.
+			-7: The door will not be shown on the compass! I wonder how many of these secret doors are in the game...
+	-Destination byte: This marks where the room will take the player.
+	-Door start column: Obviously marks where a door starts.
+	-Door end column:	As there are larger gates, you need to mark where a door should end.
+	-End byte.
+
+The editor supports extracting these door details from the rom. The Door part od the data is a larger blob, maybe not the whole over 4k or data are doors only.

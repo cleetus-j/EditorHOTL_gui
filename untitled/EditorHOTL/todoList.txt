@@ -1,0 +1,78 @@
+ROM:
+-Can read
+-Can save
+-Can check, if the ROM is expanded or not.
+     This may be needed for modded games, or hacks.
+-Can do a primitive form of file hashing.
+
+ROM TODO:
+-Handle parameters to use the normal release, the proto and the later hacks, mainly Bloodcurse. This last one is especially needed, since the game would be constatly changing, until finalized of course.
+------------------------------------------------------------------------------
+Charstat:		!DONE!
+-Can handle inventory.
+-Can handle starting items.
+-Can handle character stats.
+-Can list stats.
+-Can list inventory.
+-Can concatenate stats and inventory, so it could be reinserted in the original ROM.
+-Export-import data if needed.
+
+Charstat TODO: NONE!
+------------------------------------------------------------------------------
+
+companion:		!DONE!
+-Can print stats
+-Can print inventory
+-Retrieve the character\companion stats
+-Make a copy of said stats.
+-Can insert the new character stats into the ROM.
+-Can change names for the base game.
+
+The Todo list is not really important right now.
+
+Todo:	    (These are low prio atm.)
+-Make it, that the proto\hack is also doable. Look into the proto, where all these stuff is. If it's worth the trouble.	-Not really a priority ATM.
+Inserting new characters is not priority at all. It can be done manually other ways.
+
+-----------------------------------------------------------------------------
+Door:
+-Can print Door details, what compass is used and so on.
+-Can create a doortype based on ROM data.
+
+TODO:
+Since this is just starting out, a lot is needed.
+
+-Create doors -do it in a CSV.
+-Edit doors   -do it in a CSV.
+-Export\Import door data in a CSV	-Done. We can manually export stuff, so doors too.
+-Rewrite code to use better techniques
+
+A note on creating and editing doors:
+  Since there's now a CSV import-export part, you can just make a CSV, edit it, then import. All the details of doors can be found in the source code, and in the disassembly as well.
+  Drawing maps and things would be needed anyways to check where are you. Using a nice emulator with debugging is mandatory, so that should help too.
+
+As for the GUI part:
+-To show on the editor, and be able to edit it there would be nice.
+
+-----------------------------------------------------------------------------
+
+Enemy:
+-Enemies can be listed from the ROM.
+-Data can be exported-imported, but also easier to just hex-edit the ROM.
+
+TODO:
+
+-Edit enemy list.
+      Of course, the list has to be validated by the program itself:
+      The first eight enemy type for example are the players themselves, which is of course of no use. The editor would not really support editing the behaviour of the enemies, since they work on an already simple formula.
+-CSV export-import of course.
+-Proto and hack compatibility.
+-Reverse engineer the various enemy types, and how they are able to shoot projectiles. Maybe later this would help create new enemy types as well.
+--------------------------------------------------
+CSV:
+
+	-The program can import\export CSVs. There's also a separate import for the character names.
+	
+TODO:
+
+	None at the moment(?)
